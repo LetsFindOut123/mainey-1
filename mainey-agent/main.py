@@ -18,6 +18,7 @@ from tools.xano import XanoClient
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+PROTOCOL_PATH = PROJECT_ROOT / "PROTOCOL.md"
 
 
 def _try_llm_plan(task: str, settings: Settings, memory_items: list[dict]) -> dict[str, Any] | None:
@@ -92,6 +93,7 @@ def main() -> int:
     # Manual tool invocations
     parser.add_argument("--xano", nargs=2, metavar=("METHOD", "PATH"), help="Run a single Xano call immediately")
     parser.add_argument("--weweb", metavar="DESCRIPTION", help="Print a WeWeb JS snippet for DESCRIPTION")
+    parser.add_argument("--protocol", action="store_true", help="Print Mainey Agent protocol + taxonomy")
 
     args = parser.parse_args()
 
@@ -102,6 +104,13 @@ def main() -> int:
 
     history = TaskHistory(settings.history_path)
     memory = RollingMemory(settings.memory_path)
+
+    if args.protocol:
+        text = PROTOCOL_PATH.read_text(encoding="utf-8")
+        print(text)
+        history.append({"type": "protocol_print", "role": role, "path": str(PROTOCOL_PATH)})
+        memory.add({"type": "protocol_print"})
+        return 0
 
     # Manual WeWeb snippet
     if args.weweb:

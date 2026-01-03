@@ -34,6 +34,10 @@ pip install -r mainey-agent/requirements.txt
 python3 mainey-agent/main.py "Fix login bug and add success redirect to dashboard"
 ```
 
+### Protocol + taxonomy
+
+See `mainey-agent/PROTOCOL.md` for the v1.1 command protocol and task taxonomy.
+
 ### Task history + memory
 
 - History is appended to `mainey-agent/.history/tasks.jsonl`
