@@ -50,3 +50,16 @@ You can bootstrap and run the agent **without typing any terminal commands**:
   - **Mainey Agent: WeWeb Snippet (prompt for description)** (prompts for a description and prints a JS snippet)
 
 This uses the scripts in `scripts/` to create `mainey-agent/.venv`, install dependencies, and (if needed) guide you through creating `mainey-agent/.env`. Secrets are gitignored.
+
+## Architecture: Mainey 1 vs Mainey 2/3 runway
+
+- **Mainey 1 (public beta)**: Next.js + Supabase is the production app.
+- **Stable internal API boundary (now)**:
+  - **Contracts** live in `contracts/*.json` (machine-readable, consistent shapes).
+  - **Internal APIs** live under `app/api/*` and are treated as the only interface the UI depends on.
+  - This lets us swap/extend implementations later (Mainey 2/3) without rewriting the product UI.
+- **Mainey 2/3 (upgrade path)**:
+  - Replace or augment `/api/*` implementations with additional services (Xano, queues, search, custom backends) while keeping the same contracts.
+  - Keep Supabase RLS in place as a baseline authorization layer.
+- **Operator agent**:
+  - `mainey-agent` can emit deterministic patch bundles to `mainey-agent/out/...` and run smoke tests, so upgrades stay repeatable and auditable.

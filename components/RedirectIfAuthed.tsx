@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
 
 export function RedirectIfAuthed({ to = '/dashboard' }: { to?: string }) {
   const router = useRouter()
@@ -11,9 +10,10 @@ export function RedirectIfAuthed({ to = '/dashboard' }: { to?: string }) {
     let alive = true
 
     async function check() {
-      const { data } = await supabase.auth.getSession()
       if (!alive) return
-      if (data.session) router.replace(to)
+      const res = await fetch('/api/auth/me')
+      if (!alive) return
+      if (res.ok) router.replace(to)
     }
 
     check()

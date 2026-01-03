@@ -1,0 +1,38 @@
+{
+  "module": "map",
+  "version": "1.0",
+  "endpoints": [
+    {
+      "name": "ListPins",
+      "method": "GET",
+      "path": "/api/map/pins",
+      "auth": "public",
+      "input": {
+        "query": {
+          "bbox": "string? (minLng,minLat,maxLng,maxLat)",
+          "types": "string? (comma-separated)"
+        }
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "pins": [
+            {
+              "id": "string",
+              "type": "space|event|company|other",
+              "title": "string",
+              "location": { "lat": "number", "lng": "number" },
+              "meta": "object"
+            }
+          ]
+        }
+      },
+      "todo": "Implement unified pins response skeleton"
+    }
+  ],
+  "errors": [
+    { "code": "bad_request", "http": 400 },
+    { "code": "internal", "http": 500 }
+  ]
+}
+

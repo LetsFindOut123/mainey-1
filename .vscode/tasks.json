@@ -8,6 +8,12 @@
       "default": "Generate a WeWeb snippet to log a successful login"
     },
     {
+      "id": "maineyEmitPatchTask",
+      "type": "promptString",
+      "description": "Enter the repo-change task to emit a patch for",
+      "default": "Update README.md to add a short note"
+    },
+    {
       "id": "wewebDesc",
       "type": "promptString",
       "description": "WeWeb snippet description",
@@ -70,6 +76,63 @@
           "${workspaceFolder}\\scripts\\mainey_agent_run.ps1",
           "--weweb",
           "${input:wewebDesc}"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mainey Agent: Smoke Test",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/mainey_agent_run.sh",
+      "args": [
+        "--smoke"
+      ],
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\mainey_agent_run.ps1",
+          "--smoke"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mainey Agent: Emit Patch (interactive)",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/mainey_agent_run.sh",
+      "args": [
+        "${input:maineyEmitPatchTask}"
+      ],
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\mainey_agent_run.ps1",
+          "task",
+          "${input:maineyEmitPatchTask}"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mainey App: Build",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/mainey_app_build.sh",
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\mainey_app_build.ps1"
         ]
       },
       "problemMatcher": []

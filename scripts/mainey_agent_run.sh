@@ -23,6 +23,10 @@ if [[ "${1:-}" == "--weweb" ]]; then
   exec "$venv_python" "$agent_dir/main.py" "anything" --weweb "$desc"
 fi
 
+if [[ "${1:-}" == "--smoke" ]]; then
+  exec "$venv_python" "$agent_dir/main.py" "smoke:test" --no-emit-patch
+fi
+
 task="${*:-}"
 if [[ -z "$task" && -t 0 ]]; then
   read -r -p "Task: " task

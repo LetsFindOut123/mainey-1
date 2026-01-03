@@ -11,8 +11,10 @@ from dotenv import load_dotenv
 from tools.cursor_cli import CursorCLI
 from tools.history import TaskHistory
 from tools.memory import RollingMemory
+from tools.patch import DEFAULT_PATCH_SCOPE, emit_patch_bundle
 from tools.roles import RoleGuard
 from tools.settings import Settings
+from tools.smoke import run_smoke
 from tools.weweb import build_weweb_js_snippet
 from tools.xano import XanoClient
 
@@ -105,6 +107,17 @@ def main() -> int:
         help="Comma-separated HTTP statuses to treat as allowed errors (e.g. 401,404)",
     )
 
+    # Operator / patch mode
+    parser.add_argument("--emit-patch", action="store_true", default=True, help="Emit patch bundle (default: true)")
+    parser.add_argument("--no-emit-patch", dest="emit_patch", action="store_false", help="Disable patch bundle emission")
+    parser.add_argument("--apply-patch", action="store_true", help="Apply emitted patch to working tree (default: false)")
+    parser.add_argument(
+        "--patch-scope",
+        default=",".join(DEFAULT_PATCH_SCOPE),
+        help='Comma-separated allowlist prefixes (default: "app/,components/,contracts/,supabase/,mainey-agent/")',
+    )
+    parser.add_argument("--smoke", action="store_true", help="Run smoke tests and exit")
+
     # Manual tool invocations
     parser.add_argument("--xano", nargs=2, metavar=("METHOD", "PATH"), help="Run a single Xano call immediately")
     parser.add_argument("--weweb", metavar="DESCRIPTION", help="Print a WeWeb JS snippet for DESCRIPTION")
@@ -119,6 +132,13 @@ def main() -> int:
 
     history = TaskHistory(settings.history_path)
     memory = RollingMemory(settings.memory_path)
+
+    if args.smoke or args.task.strip() == "smoke:test":
+        result = run_smoke(PROJECT_ROOT.parent)
+        print(json.dumps({"ok": result.ok, "checks": result.checks}, ensure_ascii=False, indent=2))
+        history.append({"type": "smoke_test", "role": role, "ok": result.ok, "checks": result.checks})
+        memory.add({"type": "smoke_test", "ok": result.ok})
+        return 0 if result.ok else 1
 
     if args.protocol:
         text = PROTOCOL_PATH.read_text(encoding="utf-8")
@@ -165,6 +185,38 @@ def main() -> int:
 
     history.append({"type": "agent_task", "role": role, "task": task, "plan": plan})
     memory.add({"type": "agent_task", "task": task})
+
+    # Operator: emit patch bundle (deterministic artifacts on disk)
+    if args.emit_patch:
+        llm_model = None
+        if settings.openai_api_key:
+            try:
+                from langchain_openai import ChatOpenAI
+
+                llm_model = ChatOpenAI(model=settings.openai_model, temperature=0)
+            except Exception:
+                llm_model = None
+
+        scope = [s.strip() for s in (args.patch_scope or "").split(",") if s.strip()]
+        bundle = emit_patch_bundle(
+            repo_root=PROJECT_ROOT.parent,
+            task=task,
+            role=role,
+            plan=plan,
+            scope=scope,
+            emit_patch=True,
+            apply=args.apply_patch,
+            llm_model=llm_model,
+        )
+        history.append(
+            {
+                "type": "patch_bundle",
+                "role": role,
+                "task": task,
+                "out_dir": str(bundle.out_dir),
+                "applied": bool(args.apply_patch),
+            }
+        )
 
     # Execute planned Xano calls (explicit opt-in)
     if args.run_xano and plan.get("xano_calls"):

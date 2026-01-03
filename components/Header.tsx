@@ -2,8 +2,6 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 const nav = [
   'Home','Feed','Discover','Community','Gigs','Events',
@@ -19,25 +17,21 @@ export function Header() {
     let alive = true
 
     async function load() {
-      const { data } = await supabase.auth.getSession()
       if (!alive) return
-      setAuthed(!!data.session)
+      const res = await fetch('/api/auth/me')
+      if (!alive) return
+      setAuthed(res.ok)
     }
 
     load()
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setAuthed(!!session)
-    })
-
     return () => {
       alive = false
-      sub.subscription.unsubscribe()
     }
   }, [])
 
   async function logout() {
-    await supabase.auth.signOut()
+    await fetch('/api/auth/logout', { method: 'POST' })
     router.replace('/login')
   }
 
@@ -66,6 +60,7 @@ export function Header() {
             <>
               <Link href="/dashboard" className="text-gray-300 hover:text-red-400">Dashboard</Link>
               <Link href="/profile" className="text-gray-300 hover:text-red-400">Profile</Link>
+              <Link href="/messages" className="text-gray-300 hover:text-red-400">Messages</Link>
               <button
                 onClick={logout}
                 className="px-3 py-1 rounded bg-gray-800 border border-gray-700 hover:border-gray-500"

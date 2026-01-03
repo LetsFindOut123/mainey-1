@@ -1,0 +1,21 @@
+{
+  "module": "companies",
+  "version": "1.0",
+  "endpoints": [
+    {
+      "name": "GetCompanyBySlug",
+      "method": "GET",
+      "path": "/api/companies/:slug",
+      "auth": "public",
+      "input": { "params": { "slug": "string" } },
+      "output": { "ok": true, "data": { "company": {} } },
+      "todo": "Implement public company by slug skeleton"
+    }
+  ],
+  "errors": [
+    { "code": "bad_request", "http": 400 },
+    { "code": "not_found", "http": 404 },
+    { "code": "internal", "http": 500 }
+  ]
+}
+

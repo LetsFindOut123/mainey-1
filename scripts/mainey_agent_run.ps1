@@ -27,6 +27,11 @@ if ($Mode -eq "--weweb") {
   exit $LASTEXITCODE
 }
 
+if ($Mode -eq "--smoke") {
+  & $VenvPython (Join-Path $AgentDir "main.py") "smoke:test" --no-emit-patch
+  exit $LASTEXITCODE
+}
+
 # If called as: .\mainey_agent_run.ps1 "Do something" (without explicit mode),
 # treat $Mode as the start of the task string.
 $task = ""

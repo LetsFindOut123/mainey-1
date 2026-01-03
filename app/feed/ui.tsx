@@ -2,14 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabaseClient'
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 type FeedPost = {
   id: string
-  author_id: string | null
+  authorId: string | null
   body: string
-  created_at: string
+  createdAt: string
 }
 
 const PAGE_SIZE = 10
@@ -21,29 +19,25 @@ export function FeedClient() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [authedUserId, setAuthedUserId] = useState<string | null>(null)
+  const [authed, setAuthed] = useState(false)
   const [draft, setDraft] = useState('')
   const [posting, setPosting] = useState(false)
 
-  const canPost = useMemo(() => !!authedUserId, [authedUserId])
+  const canPost = useMemo(() => authed, [authed])
 
   useEffect(() => {
     let alive = true
 
     async function loadSession() {
-      const { data } = await supabase.auth.getSession()
+      const res = await fetch('/api/auth/me')
       if (!alive) return
-      setAuthedUserId(data.session?.user?.id ?? null)
+      setAuthed(res.ok)
     }
 
     loadSession()
-    const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setAuthedUserId(session?.user?.id ?? null)
-    })
 
     return () => {
       alive = false
-      sub.subscription.unsubscribe()
     }
   }, [])
 
@@ -54,23 +48,19 @@ export function FeedClient() {
 
     try {
       const effectiveCursor = opts.reset ? null : cursor
-      let q = supabase
-        .from('feed_posts')
-        .select('id, author_id, body, created_at')
-        .order('created_at', { ascending: false })
-        .limit(PAGE_SIZE)
+      const qs = new URLSearchParams()
+      qs.set('limit', String(PAGE_SIZE))
+      if (effectiveCursor) qs.set('cursor', effectiveCursor)
+      const res = await fetch(`/api/feed?${qs.toString()}`)
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.error?.message || 'Failed to load feed.')
 
-      if (effectiveCursor) q = q.lt('created_at', effectiveCursor)
-
-      const { data, error } = await q
-      if (error) throw error
-
-      const rows = (data ?? []) as FeedPost[]
-      const nextCursor = rows.length ? rows[rows.length - 1].created_at : null
+      const rows = (json?.data?.items ?? []) as FeedPost[]
+      const nextCursor = json?.data?.pageInfo?.nextCursor ?? null
 
       setPosts(prev => (opts.reset ? rows : [...prev, ...rows]))
       setCursor(nextCursor)
-      setHasMore(rows.length === PAGE_SIZE)
+      setHasMore(!!json?.data?.pageInfo?.hasMore)
     } catch (e: any) {
       setError(e?.message || 'Failed to load feed.')
       setHasMore(false)
@@ -85,7 +75,6 @@ export function FeedClient() {
   }, [])
 
   async function submitPost() {
-    if (!authedUserId) return
     const body = draft.trim()
     if (!body) return
 
@@ -93,11 +82,13 @@ export function FeedClient() {
     setError(null)
 
     try {
-      const { error } = await supabase.from('feed_posts').insert({
-        author_id: authedUserId,
-        body,
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ body }),
       })
-      if (error) throw error
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.error?.message || 'Failed to post.')
       setDraft('')
       // Refresh newest posts
       await fetchPage({ reset: true })
@@ -154,7 +145,7 @@ export function FeedClient() {
           posts.map(p => (
             <div key={p.id} className="rounded border border-gray-800 bg-black/30 p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-gray-500">{new Date(p.created_at).toLocaleString()}</p>
+                <p className="text-xs text-gray-500">{new Date(p.createdAt).toLocaleString()}</p>
               </div>
               <p className="mt-2 whitespace-pre-wrap text-gray-200">{p.body}</p>
             </div>

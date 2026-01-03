@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -14,10 +12,10 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     let alive = true
 
     async function check() {
-      const { data } = await supabase.auth.getSession()
+      const res = await fetch('/api/auth/me')
       if (!alive) return
 
-      if (!data.session) {
+      if (!res.ok) {
         const next = encodeURIComponent(pathname || '/dashboard')
         router.replace(`/login?next=${next}`)
         return
@@ -28,16 +26,8 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
     check()
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      if (!session) {
-        const next = encodeURIComponent(pathname || '/dashboard')
-        router.replace(`/login?next=${next}`)
-      }
-    })
-
     return () => {
       alive = false
-      sub.subscription.unsubscribe()
     }
   }, [router, pathname])
 

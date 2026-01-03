@@ -21,3 +21,4 @@ venv/
 mainey-agent/.history/
 mainey-agent/.venv/
 mainey-agent/.env
+mainey-agent/out/

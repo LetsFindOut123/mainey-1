@@ -1,0 +1,57 @@
+{
+  "module": "gigs",
+  "version": "1.0",
+  "pagination": {
+    "type": "cursor",
+    "cursorField": "created_at",
+    "params": {
+      "limit": { "type": "integer", "default": 10, "min": 1, "max": 50 },
+      "cursor": { "type": "string", "nullable": true }
+    }
+  },
+  "endpoints": [
+    {
+      "name": "ListGigs",
+      "method": "GET",
+      "path": "/api/gigs",
+      "auth": "public",
+      "input": { "query": { "limit": "integer?", "cursor": "string?" } },
+      "output": { "ok": true, "data": { "items": [], "pageInfo": { "nextCursor": null, "hasMore": false } } },
+      "todo": "Implement Supabase-backed gig listing"
+    },
+    {
+      "name": "CreateGig",
+      "method": "POST",
+      "path": "/api/gigs",
+      "auth": "user",
+      "input": { "body": { "title": "string", "description": "string", "budget": "number?", "city": "string?" } },
+      "output": { "ok": true, "data": { "gig": {} } },
+      "todo": "Implement authenticated gig creation"
+    },
+    {
+      "name": "UpdateGig",
+      "method": "PATCH",
+      "path": "/api/gigs/:id",
+      "auth": "user",
+      "input": { "params": { "id": "string" }, "body": { "title": "string?", "description": "string?" } },
+      "output": { "ok": true, "data": { "gig": {} } },
+      "todo": "Implement gig updates (authz: owner)"
+    },
+    {
+      "name": "ApplyToGig",
+      "method": "POST",
+      "path": "/api/gigs/:id/apply",
+      "auth": "user",
+      "input": { "params": { "id": "string" }, "body": { "message": "string?" } },
+      "output": { "ok": true, "data": { "application": {} } },
+      "todo": "Implement gig application endpoint skeleton"
+    }
+  ],
+  "errors": [
+    { "code": "bad_request", "http": 400 },
+    { "code": "unauthorized", "http": 401 },
+    { "code": "not_found", "http": 404 },
+    { "code": "internal", "http": 500 }
+  ]
+}
+

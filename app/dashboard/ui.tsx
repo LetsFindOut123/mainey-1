@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
 
 export function DashboardClient() {
   const router = useRouter()
@@ -12,9 +11,10 @@ export function DashboardClient() {
     let alive = true
 
     async function load() {
-      const { data } = await supabase.auth.getUser()
+      const res = await fetch('/api/auth/me')
+      const json = await res.json().catch(() => null)
       if (!alive) return
-      setEmail(data.user?.email ?? null)
+      setEmail(json?.data?.user?.email ?? null)
     }
 
     load()
@@ -25,7 +25,7 @@ export function DashboardClient() {
   }, [])
 
   async function logout() {
-    await supabase.auth.signOut()
+    await fetch('/api/auth/logout', { method: 'POST' })
     router.replace('/login')
   }
 

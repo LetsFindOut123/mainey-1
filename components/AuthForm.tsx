@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function AuthForm({ type }: { type: 'login' | 'signup' }) {
@@ -15,28 +14,34 @@ export default function AuthForm({ type }: { type: 'login' | 'signup' }) {
     e.preventDefault()
     setMessage('')
     setLoading(true)
-    if (type === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setMessage(error.message)
-      else {
-        const next = searchParams.get('next')
-        let target = '/dashboard'
-        if (next) {
-          try {
-            target = decodeURIComponent(next)
-          } catch {
-            target = next
+    const endpoint = type === 'login' ? '/api/auth/login' : '/api/auth/signup'
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) {
+        setMessage(json?.error?.message || 'Request failed.')
+      } else {
+        if (type === 'login') {
+          const next = searchParams.get('next')
+          let target = '/dashboard'
+          if (next) {
+            try {
+              target = decodeURIComponent(next)
+            } catch {
+              target = next
+            }
           }
+          router.replace(target)
+        } else {
+          router.replace('/login?signup=1')
         }
-        router.replace(target)
       }
-    } else {
-      const { error } = await supabase.auth.signUp({ email, password })
-      if (error) setMessage(error.message)
-      else {
-        // v1.1 flow: signup → login → dashboard
-        router.replace('/login?signup=1')
-      }
+    } catch (err: any) {
+      setMessage(err?.message || 'Network error.')
     }
     setLoading(false)
   }
