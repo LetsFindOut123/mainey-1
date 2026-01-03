@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 const nav = [
   'Home','Feed','Discover','Community','Gigs','Events',
@@ -9,6 +10,31 @@ const nav = [
 
 export function Header() {
   const path = usePathname()
+  const router = useRouter()
+  const [authed, setAuthed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+
+    async function load() {
+      if (!alive) return
+      const res = await fetch('/api/auth/me')
+      if (!alive) return
+      setAuthed(res.ok)
+    }
+
+    load()
+
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.replace('/login')
+  }
+
   return (
     <header className="border-b border-gray-800 sticky top-0 bg-black/80 backdrop-blur z-50">
       <nav className="flex items-center justify-between px-6 py-3 max-w-7xl mx-auto">
@@ -30,8 +56,25 @@ export function Header() {
           })}
         </ul>
         <div className="flex items-center gap-4">
-          <Link href="/profile" className="text-gray-300 hover:text-red-400">Profile</Link>
-          <Link href="/login" className="px-3 py-1 rounded bg-red-600 hover:bg-red-700">Login</Link>
+          {authed ? (
+            <>
+              <Link href="/dashboard" className="text-gray-300 hover:text-red-400">Dashboard</Link>
+              <Link href="/profile" className="text-gray-300 hover:text-red-400">Profile</Link>
+              <Link href="/messages" className="text-gray-300 hover:text-red-400">Messages</Link>
+              <Link href="/map" className="text-gray-300 hover:text-red-400">Map</Link>
+              <button
+                onClick={logout}
+                className="px-3 py-1 rounded bg-gray-800 border border-gray-700 hover:border-gray-500"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/signup" className="text-gray-300 hover:text-red-400">Sign up</Link>
+              <Link href="/login" className="px-3 py-1 rounded bg-red-600 hover:bg-red-700">Login</Link>
+            </>
+          )}
         </div>
       </nav>
     </header>

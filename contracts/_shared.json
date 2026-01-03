@@ -1,0 +1,47 @@
+{
+  "spec": "mainey-contracts",
+  "version": "1.0",
+  "conventions": {
+    "pagination": {
+      "type": "cursor",
+      "params": {
+        "limit": {
+          "type": "integer",
+          "default": 10,
+          "min": 1,
+          "max": 50
+        },
+        "cursor": {
+          "type": "string",
+          "nullable": true,
+          "description": "Opaque cursor string; for Mainey 1 it may be an ISO timestamp or id-based cursor depending on module."
+        }
+      },
+      "response": {
+        "items": "array",
+        "pageInfo": {
+          "nextCursor": "string|null",
+          "hasMore": "boolean"
+        }
+      }
+    },
+    "errorShape": {
+      "ok": false,
+      "error": {
+        "code": "string",
+        "message": "string",
+        "details": "object|null"
+      }
+    },
+    "successShape": {
+      "ok": true,
+      "data": "object"
+    },
+    "auth": {
+      "public": "No session required",
+      "user": "Requires a valid user session",
+      "admin": "Reserved for future"
+    }
+  }
+}
+

@@ -1,0 +1,138 @@
+{
+  "module": "gigs",
+  "version": "1.0",
+  "pagination": {
+    "type": "cursor",
+    "cursorField": "created_at",
+    "params": {
+      "limit": { "type": "integer", "default": 10, "min": 1, "max": 50 },
+      "cursor": { "type": "string", "nullable": true }
+    }
+  },
+  "endpoints": [
+    {
+      "name": "ListGigs",
+      "method": "GET",
+      "path": "/api/gigs",
+      "auth": "public",
+      "input": { "query": { "limit": "integer?", "cursor": "string?" } },
+      "output": {
+        "ok": true,
+        "data": {
+          "items": [
+            {
+              "id": "string",
+              "ownerId": "string",
+              "title": "string",
+              "description": "string",
+              "location": "string|null",
+              "startsAt": "string|null",
+              "createdAt": "string"
+            }
+          ],
+          "pageInfo": { "nextCursor": "string|null", "hasMore": "boolean" }
+        }
+      }
+    },
+    {
+      "name": "CreateGig",
+      "method": "POST",
+      "path": "/api/gigs",
+      "auth": "user",
+      "input": {
+        "body": {
+          "title": "string",
+          "description": "string",
+          "location": "string?",
+          "starts_at": "string?"
+        }
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "gig": {
+            "id": "string",
+            "ownerId": "string",
+            "title": "string",
+            "description": "string",
+            "location": "string|null",
+            "startsAt": "string|null",
+            "createdAt": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "GetGig",
+      "method": "GET",
+      "path": "/api/gigs/:id",
+      "auth": "public",
+      "input": { "params": { "id": "string" } },
+      "output": {
+        "ok": true,
+        "data": {
+          "gig": {
+            "id": "string",
+            "ownerId": "string",
+            "title": "string",
+            "description": "string",
+            "location": "string|null",
+            "startsAt": "string|null",
+            "createdAt": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "UpdateGig",
+      "method": "PATCH",
+      "path": "/api/gigs/:id",
+      "auth": "user",
+      "input": {
+        "params": { "id": "string" },
+        "body": { "title": "string?", "description": "string?", "location": "string?", "starts_at": "string?" }
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "gig": {
+            "id": "string",
+            "ownerId": "string",
+            "title": "string",
+            "description": "string",
+            "location": "string|null",
+            "startsAt": "string|null",
+            "createdAt": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "ApplyToGig",
+      "method": "POST",
+      "path": "/api/gigs/apply",
+      "auth": "user",
+      "input": { "body": { "gig_id": "string", "note": "string?" } },
+      "output": {
+        "ok": true,
+        "data": {
+          "application": {
+            "id": "string",
+            "gigId": "string",
+            "userId": "string",
+            "note": "string|null",
+            "createdAt": "string"
+          }
+        }
+      }
+    }
+  ],
+  "errors": [
+    { "code": "bad_request", "http": 400 },
+    { "code": "unauthorized", "http": 401 },
+    { "code": "forbidden", "http": 403 },
+    { "code": "not_found", "http": 404 },
+    { "code": "internal", "http": 500 }
+  ]
+}
+

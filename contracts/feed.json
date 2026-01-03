@@ -1,0 +1,71 @@
+{
+  "module": "feed",
+  "version": "1.0",
+  "pagination": {
+    "type": "cursor",
+    "cursorField": "created_at",
+    "params": {
+      "limit": { "type": "integer", "default": 10, "min": 1, "max": 50 },
+      "cursor": { "type": "string", "nullable": true, "description": "ISO timestamp cursor (created_at of last item)" }
+    }
+  },
+  "endpoints": [
+    {
+      "name": "ListFeed",
+      "method": "GET",
+      "path": "/api/feed",
+      "auth": "public",
+      "input": {
+        "query": {
+          "limit": "integer?",
+          "cursor": "string?"
+        }
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "items": [
+            {
+              "id": "string",
+              "authorId": "string",
+              "body": "string",
+              "createdAt": "string"
+            }
+          ],
+          "pageInfo": {
+            "nextCursor": "string|null",
+            "hasMore": "boolean"
+          }
+        }
+      }
+    },
+    {
+      "name": "CreatePost",
+      "method": "POST",
+      "path": "/api/posts",
+      "auth": "user",
+      "input": {
+        "body": {
+          "body": "string"
+        }
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "post": {
+            "id": "string",
+            "authorId": "string",
+            "body": "string",
+            "createdAt": "string"
+          }
+        }
+      }
+    }
+  ],
+  "errors": [
+    { "code": "bad_request", "http": 400 },
+    { "code": "unauthorized", "http": 401 },
+    { "code": "internal", "http": 500 }
+  ]
+}
+

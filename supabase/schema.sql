@@ -1,5 +1,6 @@
 -- Enable UUID extension (if not already enabled)
 create extension if not exists "uuid-ossp";
+create extension if not exists "pgcrypto";
 
 -- Users & profiles
 create table if not exists profiles (
@@ -24,6 +25,36 @@ create table if not exists posts (
   created_at timestamp default now()
 );
 
+-- Feed MVP (v1): public read, authenticated post
+-- Uses auth.users directly (does not require profiles row).
+create table if not exists feed_posts (
+  id uuid primary key default uuid_generate_v4(),
+  author_id uuid references auth.users(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists feed_posts_created_at_idx on feed_posts (created_at desc);
+
+alter table feed_posts enable row level security;
+
+create policy "Public read feed_posts"
+on feed_posts for select
+using (true);
+
+create policy "Authenticated insert feed_posts"
+on feed_posts for insert
+with check (auth.uid() = author_id);
+
+create policy "Author update feed_posts"
+on feed_posts for update
+using (auth.uid() = author_id)
+with check (auth.uid() = author_id);
+
+create policy "Author delete feed_posts"
+on feed_posts for delete
+using (auth.uid() = author_id);
+
 -- Projects
 create table if not exists projects (
   id uuid primary key default uuid_generate_v4(),
@@ -34,36 +65,289 @@ create table if not exists projects (
   created_at timestamp default now()
 );
 
--- Gigs
-create table if not exists gigs (
-  id uuid primary key default uuid_generate_v4(),
-  title text,
-  description text,
-  budget numeric,
-  city text,
-  organizer_id uuid references profiles(id) on delete set null,
-  created_at timestamp default now()
+-- Gigs MVP (v1): public read, authenticated create/edit + applications
+-- NOTE: This replaces the earlier scaffold 'gigs' table shape.
+drop table if exists gig_applications;
+drop table if exists gigs;
+
+create table gigs (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id),
+  title text not null,
+  description text not null,
+  location text,
+  starts_at timestamptz,
+  lat double precision,
+  lng double precision,
+  created_at timestamptz default now()
 );
+
+create index gigs_created_at_idx on gigs (created_at desc);
+
+alter table gigs enable row level security;
+
+create policy "Public read gigs"
+on gigs for select
+using (true);
+
+create policy "Authenticated insert gigs"
+on gigs for insert
+with check (auth.uid() = owner_id);
+
+create policy "Owner update gigs"
+on gigs for update
+using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
+
+create policy "Owner delete gigs"
+on gigs for delete
+using (auth.uid() = owner_id);
+
+create table gig_applications (
+  id uuid primary key default gen_random_uuid(),
+  gig_id uuid not null references gigs(id) on delete cascade,
+  user_id uuid not null references auth.users(id),
+  note text,
+  created_at timestamptz default now(),
+  unique (gig_id, user_id)
+);
+
+create index gig_applications_gig_id_idx on gig_applications (gig_id);
+create index gig_applications_user_id_idx on gig_applications (user_id);
+
+alter table gig_applications enable row level security;
+
+create policy "Applicant read own applications"
+on gig_applications for select
+using (auth.uid() = user_id);
+
+create policy "Gig owner read applications"
+on gig_applications for select
+using (
+  auth.uid() in (
+    select owner_id from gigs where gigs.id = gig_applications.gig_id
+  )
+);
+
+create policy "Authenticated insert applications"
+on gig_applications for insert
+with check (auth.uid() = user_id);
 
 -- Events (for calendar)
-create table if not exists events (
-  id uuid primary key default uuid_generate_v4(),
-  title text,
-  date date,
+-- Events MVP (v1): public read, authenticated create/edit + RSVPs
+-- NOTE: This replaces the earlier scaffold 'events' table shape.
+drop table if exists event_rsvps;
+drop table if exists events;
+
+create table events (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id),
+  title text not null,
+  description text not null,
   location text,
-  description text,
-  organizer_id uuid references profiles(id) on delete set null,
-  created_at timestamp default now()
+  starts_at timestamptz,
+  ends_at timestamptz,
+  lat double precision,
+  lng double precision,
+  created_at timestamptz default now()
 );
 
--- Companies
-create table if not exists companies (
-  id uuid primary key default uuid_generate_v4(),
-  name text,
+-- Map Pins v1 (canonical pin table)
+drop table if exists map_pins;
+
+create table map_pins (
+  id uuid primary key default gen_random_uuid(),
+  type text not null,
+  ref_id uuid,
+  title text not null,
   description text,
-  base_city text,
-  members uuid[], -- array of profile ids (can normalize later)
-  created_at timestamp default now()
+  lat double precision not null,
+  lng double precision not null,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  image_url text,
+  owner_id uuid references auth.users(id),
+  created_at timestamptz default now(),
+  unique (type, ref_id)
+);
+
+create index map_pins_created_at_idx on map_pins (created_at desc);
+create index map_pins_type_idx on map_pins (type);
+
+alter table map_pins enable row level security;
+
+create policy "Public read map_pins"
+on map_pins for select
+using (true);
+
+-- Only allow authenticated users to create memory pins for themselves.
+create policy "Authenticated insert memory pins"
+on map_pins for insert
+with check (
+  type = 'memory'
+  and owner_id = auth.uid()
+);
+
+-- Only allow owners to update/delete their own memory pins.
+create policy "Owner update memory pins"
+on map_pins for update
+using (type = 'memory' and owner_id = auth.uid())
+with check (type = 'memory' and owner_id = auth.uid());
+
+create policy "Owner delete memory pins"
+on map_pins for delete
+using (type = 'memory' and owner_id = auth.uid());
+
+create index events_created_at_idx on events (created_at desc);
+
+alter table events enable row level security;
+
+create policy "Public read events"
+on events for select
+using (true);
+
+create policy "Authenticated insert events"
+on events for insert
+with check (auth.uid() = owner_id);
+
+create policy "Owner update events"
+on events for update
+using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
+
+create policy "Owner delete events"
+on events for delete
+using (auth.uid() = owner_id);
+
+create table event_rsvps (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references events(id) on delete cascade,
+  user_id uuid not null references auth.users(id),
+  status text not null default 'going',
+  created_at timestamptz default now(),
+  unique (event_id, user_id)
+);
+
+create index event_rsvps_event_id_idx on event_rsvps (event_id);
+create index event_rsvps_user_id_idx on event_rsvps (user_id);
+
+alter table event_rsvps enable row level security;
+
+create policy "User read own rsvps"
+on event_rsvps for select
+using (auth.uid() = user_id);
+
+create policy "Event owner read rsvps"
+on event_rsvps for select
+using (
+  auth.uid() in (
+    select owner_id from events where events.id = event_rsvps.event_id
+  )
+);
+
+create policy "Authenticated insert rsvps"
+on event_rsvps for insert
+with check (auth.uid() = user_id);
+
+create policy "User update own rsvps"
+on event_rsvps for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+-- Companies
+-- Companies v1 (public by slug + owner-managed pages)
+drop table if exists company_pages;
+drop table if exists companies;
+
+create table companies (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id),
+  name text not null,
+  slug text not null unique,
+  bio text,
+  website_url text,
+  logo_url text,
+  theme jsonb,
+  created_at timestamptz default now()
+);
+
+create index companies_created_at_idx on companies (created_at desc);
+create index companies_owner_id_idx on companies (owner_id);
+
+alter table companies enable row level security;
+
+create policy "Public read companies"
+on companies for select
+using (true);
+
+create policy "Authenticated insert companies"
+on companies for insert
+with check (auth.uid() = owner_id);
+
+create policy "Owner update companies"
+on companies for update
+using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
+
+create policy "Owner delete companies"
+on companies for delete
+using (auth.uid() = owner_id);
+
+create table company_pages (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  type text not null,
+  title text,
+  content jsonb not null default '{}'::jsonb,
+  sort_order int not null default 0,
+  created_at timestamptz default now(),
+  unique (company_id, type)
+);
+
+create index company_pages_company_id_idx on company_pages (company_id);
+create index company_pages_sort_idx on company_pages (company_id, sort_order asc);
+
+alter table company_pages enable row level security;
+
+create policy "Public read company_pages"
+on company_pages for select
+using (true);
+
+create policy "Owner insert company_pages"
+on company_pages for insert
+with check (
+  exists (
+    select 1 from companies c
+    where c.id = company_pages.company_id
+      and c.owner_id = auth.uid()
+  )
+);
+
+create policy "Owner update company_pages"
+on company_pages for update
+using (
+  exists (
+    select 1 from companies c
+    where c.id = company_pages.company_id
+      and c.owner_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from companies c
+    where c.id = company_pages.company_id
+      and c.owner_id = auth.uid()
+  )
+);
+
+create policy "Owner delete company_pages"
+on company_pages for delete
+using (
+  exists (
+    select 1 from companies c
+    where c.id = company_pages.company_id
+      and c.owner_id = auth.uid()
+  )
 );
 
 -- Spaces (venues, studios)
