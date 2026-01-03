@@ -39,3 +39,14 @@ This repo also includes a small Python CLI scaffold in `mainey-agent/` for autom
 
 - Setup: see `mainey-agent/README.md`
 - Run: `python3 mainey-agent/main.py "your task here"`
+
+## No-terminal: run Mainey Agent via Cursor Tasks
+
+You can bootstrap and run the agent **without typing any terminal commands**:
+
+- In Cursor: **Command Palette** → **Tasks: Run Task**
+  - **Mainey Agent: Bootstrap** (one-time, idempotent)
+  - **Mainey Agent: Run (interactive)** (prompts for the task string)
+  - **Mainey Agent: WeWeb Snippet (prompt for description)** (prompts for a description and prints a JS snippet)
+
+This uses the scripts in `scripts/` to create `mainey-agent/.venv`, install dependencies, and (if needed) guide you through creating `mainey-agent/.env`. Secrets are gitignored.

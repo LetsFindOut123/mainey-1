@@ -19,3 +19,5 @@ venv/
 
 # mainey agent runtime artifacts
 mainey-agent/.history/
+mainey-agent/.venv/
+mainey-agent/.env

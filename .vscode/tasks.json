@@ -1,0 +1,79 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "maineyAgentTask",
+      "type": "promptString",
+      "description": "Enter the agent task to run",
+      "default": "Generate a WeWeb snippet to log a successful login"
+    },
+    {
+      "id": "wewebDesc",
+      "type": "promptString",
+      "description": "WeWeb snippet description",
+      "default": "Log successful login"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Mainey Agent: Bootstrap",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/mainey_agent_bootstrap.sh",
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\mainey_agent_bootstrap.ps1"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mainey Agent: Run (interactive)",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/mainey_agent_run.sh",
+      "args": [
+        "${input:maineyAgentTask}"
+      ],
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\mainey_agent_run.ps1",
+          "task",
+          "${input:maineyAgentTask}"
+        ]
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mainey Agent: WeWeb Snippet (prompt for description)",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/mainey_agent_run.sh",
+      "args": [
+        "--weweb",
+        "${input:wewebDesc}"
+      ],
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\mainey_agent_run.ps1",
+          "--weweb",
+          "${input:wewebDesc}"
+        ]
+      },
+      "problemMatcher": []
+    }
+  ]
+}
+
