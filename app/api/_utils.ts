@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 export type ApiErrorCode =
   | 'bad_request'
   | 'unauthorized'
+  | 'forbidden'
   | 'not_found'
   | 'method_not_allowed'
   | 'internal'

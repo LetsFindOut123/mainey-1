@@ -112,10 +112,26 @@ def _check_agent_tests(repo_root: Path) -> dict[str, Any]:
     return {"name": "agent_tests", "ok": code == 0, "details": "unittest", "output": out[-4000:] if code != 0 else ""}
 
 
+def _check_gigs_mvp_files(repo_root: Path) -> dict[str, Any]:
+    required = [
+        repo_root / "contracts" / "gigs.json",
+        repo_root / "app" / "api" / "gigs" / "route.ts",
+        repo_root / "app" / "api" / "gigs" / "apply" / "route.ts",
+        repo_root / "app" / "api" / "gigs" / "[id]" / "route.ts",
+        repo_root / "app" / "gigs" / "page.tsx",
+        repo_root / "app" / "gigs" / "ui.tsx",
+        repo_root / "app" / "gigs" / "[id]" / "page.tsx",
+        repo_root / "app" / "gigs" / "[id]" / "ui.tsx",
+    ]
+    missing = [str(p.relative_to(repo_root)) for p in required if not p.exists()]
+    return {"name": "gigs_mvp_files", "ok": not missing, "details": "missing: " + ", ".join(missing) if missing else "present"}
+
+
 def run_smoke(repo_root: Path) -> SmokeResult:
     checks = [
         _check_contracts(repo_root),
         _check_supabase_schema(repo_root),
+        _check_gigs_mvp_files(repo_root),
         _check_next_build(repo_root),
         _check_agent_self(repo_root),
         _check_agent_tests(repo_root),

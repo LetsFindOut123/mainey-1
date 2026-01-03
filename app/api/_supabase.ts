@@ -32,3 +32,14 @@ export function getAuthTokenFromRequest(req: Request, cookieName = 'mainey_acces
   return null
 }
 
+export async function getUserIdFromAccessToken(token: string): Promise<string | null> {
+  try {
+    const supabase = getSupabaseAnonClient()
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error) return null
+    return data.user?.id ?? null
+  } catch {
+    return null
+  }
+}
+

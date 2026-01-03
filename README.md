@@ -63,3 +63,10 @@ This uses the scripts in `scripts/` to create `mainey-agent/.venv`, install depe
   - Keep Supabase RLS in place as a baseline authorization layer.
 - **Operator agent**:
   - `mainey-agent` can emit deterministic patch bundles to `mainey-agent/out/...` and run smoke tests, so upgrades stay repeatable and auditable.
+
+## Gigs MVP checklist
+
+- Create gig (authed) via `/gigs`
+- Browse public gigs (public) via `/gigs`
+- Apply to gig (authed, non-owner) via `/gigs/[id]`
+- Owner edits gig (authed owner) via `/gigs/[id]`
