@@ -27,6 +27,8 @@ export function GigsClient() {
   const [description, setDescription] = useState('')
   const [location, setLocation] = useState('')
   const [startsAt, setStartsAt] = useState('')
+  const [lat, setLat] = useState('')
+  const [lng, setLng] = useState('')
   const [creating, setCreating] = useState(false)
 
   const canCreate = useMemo(() => authed, [authed])
@@ -89,6 +91,8 @@ export function GigsClient() {
           description: d,
           location: location.trim() || null,
           starts_at: startsAt.trim() || null,
+          lat: lat.trim() ? Number(lat) : null,
+          lng: lng.trim() ? Number(lng) : null,
         }),
       })
       const json = await res.json().catch(() => null)
@@ -98,6 +102,8 @@ export function GigsClient() {
       setDescription('')
       setLocation('')
       setStartsAt('')
+      setLat('')
+      setLng('')
       await fetchPage({ reset: true })
     } catch (e: any) {
       setError(e?.message || 'Failed to create gig.')
@@ -134,6 +140,18 @@ export function GigsClient() {
               value={startsAt}
               onChange={e => setStartsAt(e.target.value)}
               placeholder="Starts at (ISO, optional)"
+              className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
+            />
+            <input
+              value={lat}
+              onChange={e => setLat(e.target.value)}
+              placeholder="Latitude (optional)"
+              className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
+            />
+            <input
+              value={lng}
+              onChange={e => setLng(e.target.value)}
+              placeholder="Longitude (optional)"
               className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
             />
           </div>

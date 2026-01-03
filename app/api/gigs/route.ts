@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { jsonError, jsonOk, readJson } from '@/app/api/_utils'
-import { getAuthTokenFromRequest, getSupabaseAnonClient, getUserIdFromAccessToken } from '@/app/api/_supabase'
+import { getAuthTokenFromRequest, getSupabaseAnonClient, getSupabaseServiceClient, getUserIdFromAccessToken } from '@/app/api/_supabase'
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
 
   let q = supabase
     .from('gigs')
-    .select('id, owner_id, title, description, location, starts_at, created_at')
+    .select('id, owner_id, title, description, location, starts_at, lat, lng, created_at')
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -41,6 +41,8 @@ export async function GET(req: Request) {
       description: r.description,
       location: r.location ?? null,
       startsAt: r.starts_at ?? null,
+      lat: (r as any).lat ?? null,
+      lng: (r as any).lng ?? null,
       createdAt: r.created_at,
     })),
     pageInfo: {
@@ -55,6 +57,8 @@ type CreateGigBody = {
   description?: string
   location?: string | null
   starts_at?: string | null
+  lat?: number | null
+  lng?: number | null
 }
 
 export async function POST(req: Request) {
@@ -70,8 +74,13 @@ export async function POST(req: Request) {
   const description = (body?.description || '').trim()
   const location = body?.location ?? null
   const startsAt = body?.starts_at ?? null
+  const lat = typeof body?.lat === 'number' ? body?.lat : null
+  const lng = typeof body?.lng === 'number' ? body?.lng : null
 
   if (!title || !description) return jsonError('bad_request', 'title and description are required', 400)
+  if ((lat === null) !== (lng === null)) return jsonError('bad_request', 'lat and lng must be provided together', 400)
+  if (lat !== null && (lat < -90 || lat > 90)) return jsonError('bad_request', 'lat must be between -90 and 90', 400)
+  if (lng !== null && (lng < -180 || lng > 180)) return jsonError('bad_request', 'lng must be between -180 and 180', 400)
 
   let supabase
   try {
@@ -88,11 +97,34 @@ export async function POST(req: Request) {
       description,
       location,
       starts_at: startsAt,
+      lat,
+      lng,
     })
-    .select('id, owner_id, title, description, location, starts_at, created_at')
+    .select('id, owner_id, title, description, location, starts_at, lat, lng, created_at')
     .single()
 
   if (error || !data) return jsonError('internal', error?.message || 'Failed to create gig', 500)
+
+  // Map pin sync (server-managed)
+  if (lat !== null && lng !== null) {
+    try {
+      const svc = getSupabaseServiceClient()
+      await svc.from('map_pins').upsert(
+        {
+          type: 'gig',
+          ref_id: data.id,
+          title: data.title,
+          description: data.description,
+          lat,
+          lng,
+          starts_at: data.starts_at,
+        },
+        { onConflict: 'type,ref_id' }
+      )
+    } catch {
+      // Non-fatal: gig is created; map pin can be backfilled later
+    }
+  }
 
   return jsonOk({
     gig: {
@@ -102,6 +134,8 @@ export async function POST(req: Request) {
       description: data.description,
       location: data.location ?? null,
       startsAt: data.starts_at ?? null,
+      lat: data.lat ?? null,
+      lng: data.lng ?? null,
       createdAt: data.created_at,
     },
   })

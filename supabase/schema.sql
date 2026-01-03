@@ -77,6 +77,8 @@ create table gigs (
   description text not null,
   location text,
   starts_at timestamptz,
+  lat double precision,
+  lng double precision,
   created_at timestamptz default now()
 );
 
@@ -145,8 +147,56 @@ create table events (
   location text,
   starts_at timestamptz,
   ends_at timestamptz,
+  lat double precision,
+  lng double precision,
   created_at timestamptz default now()
 );
+
+-- Map Pins v1 (canonical pin table)
+drop table if exists map_pins;
+
+create table map_pins (
+  id uuid primary key default gen_random_uuid(),
+  type text not null,
+  ref_id uuid,
+  title text not null,
+  description text,
+  lat double precision not null,
+  lng double precision not null,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  image_url text,
+  owner_id uuid references auth.users(id),
+  created_at timestamptz default now(),
+  unique (type, ref_id)
+);
+
+create index map_pins_created_at_idx on map_pins (created_at desc);
+create index map_pins_type_idx on map_pins (type);
+
+alter table map_pins enable row level security;
+
+create policy "Public read map_pins"
+on map_pins for select
+using (true);
+
+-- Only allow authenticated users to create memory pins for themselves.
+create policy "Authenticated insert memory pins"
+on map_pins for insert
+with check (
+  type = 'memory'
+  and owner_id = auth.uid()
+);
+
+-- Only allow owners to update/delete their own memory pins.
+create policy "Owner update memory pins"
+on map_pins for update
+using (type = 'memory' and owner_id = auth.uid())
+with check (type = 'memory' and owner_id = auth.uid());
+
+create policy "Owner delete memory pins"
+on map_pins for delete
+using (type = 'memory' and owner_id = auth.uid());
 
 create index events_created_at_idx on events (created_at desc);
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 import subprocess
 import sys
+import shutil
 from typing import Any
 
 
@@ -84,7 +85,21 @@ def _check_next_build(repo_root: Path) -> dict[str, Any]:
         if code != 0:
             return {"name": "next_build", "ok": False, "details": "npm install failed", "output": out[-4000:]}
 
+    # Next.js can occasionally fail during export renames; clean .next for determinism.
+    try:
+        shutil.rmtree(repo_root / ".next", ignore_errors=True)
+    except Exception:
+        pass
+
     code, out = _run(["npm", "run", "build"], cwd=repo_root, timeout_s=900)
+    if code != 0 and ("ENOTEMPTY" in out or "ENOENT" in out) and ".next/export" in out:
+        # Retry once after cleaning.
+        try:
+            shutil.rmtree(repo_root / ".next", ignore_errors=True)
+        except Exception:
+            pass
+        code, out = _run(["npm", "run", "build"], cwd=repo_root, timeout_s=900)
+
     return {"name": "next_build", "ok": code == 0, "details": "next build", "output": out[-4000:] if code != 0 else ""}
 
 
@@ -140,6 +155,17 @@ def _check_events_mvp_files(repo_root: Path) -> dict[str, Any]:
     missing = [str(p.relative_to(repo_root)) for p in required if not p.exists()]
     return {"name": "events_mvp_files", "ok": not missing, "details": "missing: " + ", ".join(missing) if missing else "present"}
 
+def _check_map_pins_v1_files(repo_root: Path) -> dict[str, Any]:
+    required = [
+        repo_root / "contracts" / "map.json",
+        repo_root / "app" / "api" / "map" / "pins" / "route.ts",
+        repo_root / "app" / "api" / "map" / "pins" / "memory" / "route.ts",
+        repo_root / "app" / "map" / "page.tsx",
+        repo_root / "app" / "map" / "ui.tsx",
+    ]
+    missing = [str(p.relative_to(repo_root)) for p in required if not p.exists()]
+    return {"name": "map_pins_v1_files", "ok": not missing, "details": "missing: " + ", ".join(missing) if missing else "present"}
+
 
 def run_smoke(repo_root: Path) -> SmokeResult:
     checks = [
@@ -147,6 +173,7 @@ def run_smoke(repo_root: Path) -> SmokeResult:
         _check_supabase_schema(repo_root),
         _check_gigs_mvp_files(repo_root),
         _check_events_mvp_files(repo_root),
+        _check_map_pins_v1_files(repo_root),
         _check_next_build(repo_root),
         _check_agent_self(repo_root),
         _check_agent_tests(repo_root),

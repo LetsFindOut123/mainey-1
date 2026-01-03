@@ -18,6 +18,17 @@ export function getSupabaseAnonClient(accessToken?: string): SupabaseClient {
   })
 }
 
+export function getSupabaseServiceClient(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !service) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for server-managed operations')
+  }
+  return createClient(url, service, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
 export function getAuthTokenFromRequest(req: Request, cookieName = 'mainey_access_token'): string | null {
   const authHeader = req.headers.get('authorization')
   if (authHeader?.toLowerCase().startsWith('bearer ')) return authHeader.slice(7)

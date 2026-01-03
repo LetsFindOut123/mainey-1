@@ -11,6 +11,8 @@ type Gig = {
   description: string
   location: string | null
   startsAt: string | null
+  lat?: number | null
+  lng?: number | null
   createdAt: string
 }
 
@@ -36,6 +38,8 @@ export function GigDetailClient() {
   const [editDescription, setEditDescription] = useState('')
   const [editLocation, setEditLocation] = useState('')
   const [editStartsAt, setEditStartsAt] = useState('')
+  const [editLat, setEditLat] = useState('')
+  const [editLng, setEditLng] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
 
@@ -70,6 +74,8 @@ export function GigDetailClient() {
         setEditDescription(g.description)
         setEditLocation(g.location ?? '')
         setEditStartsAt(g.startsAt ?? '')
+        setEditLat(g.lat !== undefined && g.lat !== null ? String(g.lat) : '')
+        setEditLng(g.lng !== undefined && g.lng !== null ? String(g.lng) : '')
       } catch (e: any) {
         if (!alive) return
         setError(e?.message || 'Failed to load gig.')
@@ -118,6 +124,8 @@ export function GigDetailClient() {
           description: editDescription.trim(),
           location: editLocation.trim() || null,
           starts_at: editStartsAt.trim() || null,
+          lat: editLat.trim() ? Number(editLat) : null,
+          lng: editLng.trim() ? Number(editLng) : null,
         }),
       })
       const json = await res.json().catch(() => null)
@@ -175,6 +183,18 @@ export function GigDetailClient() {
                 value={editStartsAt}
                 onChange={e => setEditStartsAt(e.target.value)}
                 placeholder="Starts at (ISO, optional)"
+                className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
+              />
+              <input
+                value={editLat}
+                onChange={e => setEditLat(e.target.value)}
+                placeholder="Latitude (optional)"
+                className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
+              />
+              <input
+                value={editLng}
+                onChange={e => setEditLng(e.target.value)}
+                placeholder="Longitude (optional)"
                 className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
               />
             </div>

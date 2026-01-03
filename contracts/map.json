@@ -1,6 +1,14 @@
 {
   "module": "map",
   "version": "1.0",
+  "pagination": {
+    "type": "cursor",
+    "cursorField": "created_at",
+    "params": {
+      "limit": { "type": "integer", "default": 10, "min": 1, "max": 50 },
+      "cursor": { "type": "string", "nullable": true }
+    }
+  },
   "endpoints": [
     {
       "name": "ListPins",
@@ -9,29 +17,73 @@
       "auth": "public",
       "input": {
         "query": {
-          "bbox": "string? (minLng,minLat,maxLng,maxLat)",
-          "types": "string? (comma-separated)"
+          "types": "string? (csv subset of: event,gig,venue,memory)",
+          "limit": "integer?",
+          "cursor": "string?"
         }
       },
       "output": {
         "ok": true,
         "data": {
-          "pins": [
+          "items": [
             {
               "id": "string",
-              "type": "space|event|company|other",
+              "type": "event|gig|venue|memory",
+              "refId": "string|null",
               "title": "string",
-              "location": { "lat": "number", "lng": "number" },
-              "meta": "object"
+              "description": "string|null",
+              "lat": "number",
+              "lng": "number",
+              "startsAt": "string|null",
+              "endsAt": "string|null",
+              "imageUrl": "string|null",
+              "ownerId": "string|null",
+              "createdAt": "string"
             }
-          ]
+          ],
+          "pageInfo": { "nextCursor": "string|null", "hasMore": "boolean" }
+        }
+      }
+    },
+    {
+      "name": "CreateMemoryPin",
+      "method": "POST",
+      "path": "/api/map/pins/memory",
+      "auth": "user",
+      "input": {
+        "body": {
+          "title": "string",
+          "lat": "number",
+          "lng": "number",
+          "description": "string?",
+          "image_url": "string?"
         }
       },
-      "todo": "Implement unified pins response skeleton"
+      "output": {
+        "ok": true,
+        "data": {
+          "pin": {
+            "id": "string",
+            "type": "memory",
+            "refId": "string|null",
+            "title": "string",
+            "description": "string|null",
+            "lat": "number",
+            "lng": "number",
+            "startsAt": "string|null",
+            "endsAt": "string|null",
+            "imageUrl": "string|null",
+            "ownerId": "string",
+            "createdAt": "string"
+          }
+        }
+      }
     }
   ],
   "errors": [
     { "code": "bad_request", "http": 400 },
+    { "code": "unauthorized", "http": 401 },
+    { "code": "forbidden", "http": 403 },
     { "code": "internal", "http": 500 }
   ]
 }

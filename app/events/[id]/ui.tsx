@@ -12,6 +12,8 @@ type Event = {
   location: string | null
   startsAt: string | null
   endsAt: string | null
+  lat?: number | null
+  lng?: number | null
   createdAt: string
 }
 
@@ -44,6 +46,8 @@ export function EventDetailClient() {
   const [editLocation, setEditLocation] = useState('')
   const [editStartsAt, setEditStartsAt] = useState('')
   const [editEndsAt, setEditEndsAt] = useState('')
+  const [editLat, setEditLat] = useState('')
+  const [editLng, setEditLng] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
 
@@ -82,6 +86,8 @@ export function EventDetailClient() {
         setEditLocation(ev.location ?? '')
         setEditStartsAt(ev.startsAt ?? '')
         setEditEndsAt(ev.endsAt ?? '')
+        setEditLat(ev.lat !== undefined && ev.lat !== null ? String(ev.lat) : '')
+        setEditLng(ev.lng !== undefined && ev.lng !== null ? String(ev.lng) : '')
       } catch (e: any) {
         if (!alive) return
         setError(e?.message || 'Failed to load event.')
@@ -131,6 +137,8 @@ export function EventDetailClient() {
           location: editLocation.trim() || null,
           starts_at: editStartsAt.trim() || null,
           ends_at: editEndsAt.trim() || null,
+          lat: editLat.trim() ? Number(editLat) : null,
+          lng: editLng.trim() ? Number(editLng) : null,
         }),
       })
       const json = await res.json().catch(() => null)
@@ -195,6 +203,18 @@ export function EventDetailClient() {
                 onChange={e => setEditEndsAt(e.target.value)}
                 placeholder="Ends at (ISO, optional)"
                 className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm md:col-span-2"
+              />
+              <input
+                value={editLat}
+                onChange={e => setEditLat(e.target.value)}
+                placeholder="Latitude (optional)"
+                className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
+              />
+              <input
+                value={editLng}
+                onChange={e => setEditLng(e.target.value)}
+                placeholder="Longitude (optional)"
+                className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
               />
             </div>
             <div className="flex items-center justify-between gap-3">

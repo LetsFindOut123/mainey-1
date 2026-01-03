@@ -29,6 +29,8 @@ export function EventsClient() {
   const [location, setLocation] = useState('')
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
+  const [lat, setLat] = useState('')
+  const [lng, setLng] = useState('')
   const [creating, setCreating] = useState(false)
 
   const canCreate = useMemo(() => authed, [authed])
@@ -92,6 +94,8 @@ export function EventsClient() {
           location: location.trim() || null,
           starts_at: startsAt.trim() || null,
           ends_at: endsAt.trim() || null,
+          lat: lat.trim() ? Number(lat) : null,
+          lng: lng.trim() ? Number(lng) : null,
         }),
       })
       const json = await res.json().catch(() => null)
@@ -102,6 +106,8 @@ export function EventsClient() {
       setLocation('')
       setStartsAt('')
       setEndsAt('')
+      setLat('')
+      setLng('')
       await fetchPage({ reset: true })
     } catch (e: any) {
       setError(e?.message || 'Failed to create event.')
@@ -145,6 +151,18 @@ export function EventsClient() {
               onChange={e => setEndsAt(e.target.value)}
               placeholder="Ends at (ISO, optional)"
               className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm md:col-span-2"
+            />
+            <input
+              value={lat}
+              onChange={e => setLat(e.target.value)}
+              placeholder="Latitude (optional)"
+              className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
+            />
+            <input
+              value={lng}
+              onChange={e => setLng(e.target.value)}
+              placeholder="Longitude (optional)"
+              className="w-full rounded bg-gray-900 border border-gray-700 px-3 py-2 text-sm"
             />
           </div>
           <div className="flex justify-end">

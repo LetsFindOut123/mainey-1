@@ -61,6 +61,7 @@ export function Header() {
               <Link href="/dashboard" className="text-gray-300 hover:text-red-400">Dashboard</Link>
               <Link href="/profile" className="text-gray-300 hover:text-red-400">Profile</Link>
               <Link href="/messages" className="text-gray-300 hover:text-red-400">Messages</Link>
+              <Link href="/map" className="text-gray-300 hover:text-red-400">Map</Link>
               <button
                 onClick={logout}
                 className="px-3 py-1 rounded bg-gray-800 border border-gray-700 hover:border-gray-500"

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { jsonError, jsonOk, readJson } from '@/app/api/_utils'
-import { getAuthTokenFromRequest, getSupabaseAnonClient, getUserIdFromAccessToken } from '@/app/api/_supabase'
+import { getAuthTokenFromRequest, getSupabaseAnonClient, getSupabaseServiceClient, getUserIdFromAccessToken } from '@/app/api/_supabase'
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
@@ -15,7 +15,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { data, error } = await supabase
     .from('events')
-    .select('id, owner_id, title, description, location, starts_at, ends_at, created_at')
+    .select('id, owner_id, title, description, location, starts_at, ends_at, lat, lng, created_at')
     .eq('id', id)
     .single()
 
@@ -54,6 +54,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       location: data.location ?? null,
       startsAt: data.starts_at ?? null,
       endsAt: data.ends_at ?? null,
+      lat: data.lat ?? null,
+      lng: data.lng ?? null,
       createdAt: data.created_at,
     },
     viewerRsvp,
@@ -66,6 +68,8 @@ type PatchBody = {
   location?: string | null
   starts_at?: string | null
   ends_at?: string | null
+  lat?: number | null
+  lng?: number | null
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -86,12 +90,19 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (body && 'location' in body) patch.location = body.location
   if (body && 'starts_at' in body) patch.starts_at = body.starts_at
   if (body && 'ends_at' in body) patch.ends_at = body.ends_at
+  if (body && 'lat' in body) patch.lat = body.lat
+  if (body && 'lng' in body) patch.lng = body.lng
 
   if (Object.keys(patch).length === 0) return jsonError('bad_request', 'No fields to update', 400)
 
   if (patch.starts_at && patch.ends_at && new Date(patch.ends_at).getTime() < new Date(patch.starts_at).getTime()) {
     return jsonError('bad_request', 'ends_at must be >= starts_at', 400)
   }
+  if (('lat' in patch) !== ('lng' in patch)) return jsonError('bad_request', 'lat and lng must be provided together', 400)
+  if (patch.lat !== undefined && patch.lat !== null && (patch.lat < -90 || patch.lat > 90))
+    return jsonError('bad_request', 'lat must be between -90 and 90', 400)
+  if (patch.lng !== undefined && patch.lng !== null && (patch.lng < -180 || patch.lng > 180))
+    return jsonError('bad_request', 'lng must be between -180 and 180', 400)
 
   let anon
   try {
@@ -116,10 +127,36 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     .from('events')
     .update(patch)
     .eq('id', id)
-    .select('id, owner_id, title, description, location, starts_at, ends_at, created_at')
+    .select('id, owner_id, title, description, location, starts_at, ends_at, lat, lng, created_at')
     .single()
 
   if (error || !data) return jsonError('internal', error?.message || 'Failed to update event', 500)
+
+  // Map pin sync (server-managed)
+  try {
+    const svc = getSupabaseServiceClient()
+    const lat = data.lat ?? null
+    const lng = data.lng ?? null
+    if (lat !== null && lng !== null) {
+      await svc.from('map_pins').upsert(
+        {
+          type: 'event',
+          ref_id: data.id,
+          title: data.title,
+          description: data.description,
+          lat,
+          lng,
+          starts_at: data.starts_at,
+          ends_at: data.ends_at,
+        },
+        { onConflict: 'type,ref_id' }
+      )
+    } else {
+      await svc.from('map_pins').delete().eq('type', 'event').eq('ref_id', data.id)
+    }
+  } catch {
+    // ignore
+  }
 
   return jsonOk({
     event: {
@@ -130,6 +167,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       location: data.location ?? null,
       startsAt: data.starts_at ?? null,
       endsAt: data.ends_at ?? null,
+      lat: data.lat ?? null,
+      lng: data.lng ?? null,
       createdAt: data.created_at,
     },
   })
