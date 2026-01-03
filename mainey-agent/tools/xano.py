@@ -9,14 +9,26 @@ import requests
 class XanoClient:
     base_url: str
     api_key: str | None = None
+    auth_header: str = "Authorization"
+    auth_scheme: str | None = "Bearer"
     timeout_s: int = 30
 
-    def request(self, method: str, path: str, json_body: dict | None = None, params: dict | None = None) -> dict:
+    def request(
+        self,
+        method: str,
+        path: str,
+        json_body: dict | None = None,
+        params: dict | None = None,
+        allow_statuses: set[int] | None = None,
+    ) -> dict:
         url = self.base_url.rstrip("/") + "/" + path.lstrip("/")
         headers = {"Accept": "application/json"}
         if self.api_key:
             # Xano commonly uses Authorization: Bearer <token>
-            headers["Authorization"] = f"Bearer {self.api_key}"
+            if self.auth_scheme:
+                headers[self.auth_header] = f"{self.auth_scheme} {self.api_key}"
+            else:
+                headers[self.auth_header] = self.api_key
 
         resp = requests.request(
             method=method.upper(),
@@ -34,6 +46,13 @@ class XanoClient:
             data = {"text": resp.text}
 
         if resp.status_code >= 400:
+            if allow_statuses and resp.status_code in allow_statuses:
+                return {
+                    "status": resp.status_code,
+                    "url": url,
+                    "data": data,
+                    "allowed_error": True,
+                }
             raise RuntimeError(
                 f"Xano request failed: {resp.status_code} {resp.reason} for {method.upper()} {url}\n"
                 + json.dumps(data, ensure_ascii=False, indent=2)

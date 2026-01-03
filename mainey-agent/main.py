@@ -70,10 +70,20 @@ def _heuristic_plan(task: str) -> dict[str, Any]:
     wants_weweb = any(k in t for k in ["weweb", "block", "snippet", "inject"])
     wants_xano = any(k in t for k in ["xano", "endpoint", "api", "rest", "http"])
     wants_edit = any(k in t for k in ["fix", "refactor", "change", "edit", "update", "implement", "add"])
+    wants_validate = any(k in t for k in ["validate", "verify", "check", "smoke test", "smoketest", "probe"])
+    wants_auth = "auth" in t or "authentication" in t or "login" in t or "session" in t
+
+    xano_calls: list[dict[str, Any]] = []
+    if wants_xano:
+        # Safe-by-default probes (GET only; intended to be run with allowlisted 401/404).
+        xano_calls.append({"method": "GET", "path": "/health", "json": None, "params": None})
+        if wants_validate and wants_auth:
+            for p in ["/auth/me", "/auth/session", "/me", "/users/me", "/user/me"]:
+                xano_calls.append({"method": "GET", "path": p, "json": None, "params": None})
 
     return {
         "summary": task.strip(),
-        "xano_calls": [] if not wants_xano else [{"method": "GET", "path": "/health", "json": None, "params": None}],
+        "xano_calls": xano_calls,
         "cursor_edits": [] if not wants_edit else [{"note": "Describe desired code changes", "prompt": task.strip()}],
         "weweb_snippet": None
         if not wants_weweb
@@ -89,6 +99,11 @@ def main() -> int:
     # Explicit execution flags (safe-by-default)
     parser.add_argument("--run-xano", action="store_true", help="Actually execute planned Xano calls")
     parser.add_argument("--run-cursor", action="store_true", help="Actually attempt Cursor CLI calls")
+    parser.add_argument(
+        "--xano-allow-status",
+        default="",
+        help="Comma-separated HTTP statuses to treat as allowed errors (e.g. 401,404)",
+    )
 
     # Manual tool invocations
     parser.add_argument("--xano", nargs=2, metavar=("METHOD", "PATH"), help="Run a single Xano call immediately")
@@ -126,9 +141,15 @@ def main() -> int:
         guard.require("xano_request")
         if not settings.xano_base_url:
             raise RuntimeError("Missing XANO_BASE_URL (set it in mainey-agent/.env)")
+        allow = {int(s.strip()) for s in args.xano_allow_status.split(",") if s.strip()} or None
         method, path = args.xano
-        client = XanoClient(base_url=settings.xano_base_url, api_key=settings.xano_api_key)
-        result = client.request(method=method, path=path)
+        client = XanoClient(
+            base_url=settings.xano_base_url,
+            api_key=settings.xano_api_key,
+            auth_header=settings.xano_auth_header,
+            auth_scheme=settings.xano_auth_scheme or None,
+        )
+        result = client.request(method=method, path=path, allow_statuses=allow)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         history.append({"type": "xano_request", "role": role, "method": method, "path": path})
         memory.add({"type": "xano_request", "method": method, "path": path})
@@ -150,7 +171,13 @@ def main() -> int:
         guard.require("xano_request")
         if not settings.xano_base_url:
             raise RuntimeError("Missing XANO_BASE_URL (set it in mainey-agent/.env)")
-        client = XanoClient(base_url=settings.xano_base_url, api_key=settings.xano_api_key)
+        allow = {int(s.strip()) for s in args.xano_allow_status.split(",") if s.strip()} or None
+        client = XanoClient(
+            base_url=settings.xano_base_url,
+            api_key=settings.xano_api_key,
+            auth_header=settings.xano_auth_header,
+            auth_scheme=settings.xano_auth_scheme or None,
+        )
         results = []
         for call in plan["xano_calls"]:
             results.append(
@@ -159,6 +186,7 @@ def main() -> int:
                     path=call.get("path", "/"),
                     json_body=call.get("json"),
                     params=call.get("params"),
+                    allow_statuses=allow,
                 )
             )
         print("\n# Xano results\n" + json.dumps(results, ensure_ascii=False, indent=2))

@@ -28,6 +28,7 @@ Optional execution gates:
 
 - `--run-xano`: execute planned Xano calls
 - `--run-cursor`: execute (or record) planned Cursor edits
+- `--xano-allow-status 401,404`: treat these HTTP statuses as allowed errors (useful for safe probes)
 
 Manual tool modes:
 
@@ -77,6 +78,7 @@ Semantics:
 - `path` is appended to `XANO_BASE_URL`.
 - `json` is the request body (or `null`).
 - `params` is the querystring dict (or `null`).
+- Xano API key header defaults to `Authorization: Bearer <XANO_API_KEY>` but can be customized via env (`XANO_AUTH_HEADER`, `XANO_AUTH_SCHEME`).
 
 #### Cursor edit intent
 

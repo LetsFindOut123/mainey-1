@@ -9,6 +9,8 @@ import os
 class Settings:
     xano_api_key: str | None
     xano_base_url: str | None
+    xano_auth_header: str
+    xano_auth_scheme: str | None
     openai_api_key: str | None
     openai_model: str
     role: str
@@ -24,6 +26,8 @@ class Settings:
         return Settings(
             xano_api_key=os.getenv("XANO_API_KEY"),
             xano_base_url=os.getenv("XANO_BASE_URL"),
+            xano_auth_header=os.getenv("XANO_AUTH_HEADER", "Authorization"),
+            xano_auth_scheme=os.getenv("XANO_AUTH_SCHEME", "Bearer"),
             openai_api_key=os.getenv("OPENAI_API_KEY"),
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             role=os.getenv("MAINEY_AGENT_ROLE", "developer"),

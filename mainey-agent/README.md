@@ -15,6 +15,8 @@ Create `mainey-agent/.env`:
 ```env
 XANO_API_KEY=your_xano_key
 XANO_BASE_URL=https://your-xano-domain/api
+XANO_AUTH_HEADER=Authorization
+XANO_AUTH_SCHEME=Bearer
 
 # Optional (only needed if you enable LLM planning)
 OPENAI_API_KEY=your_openai_key
@@ -32,6 +34,12 @@ pip install -r mainey-agent/requirements.txt
 
 ```bash
 python3 mainey-agent/main.py "Fix login bug and add success redirect to dashboard"
+```
+
+Safely execute planned Xano probes (allow certain non-2xx statuses like 401/404):
+
+```bash
+python3 mainey-agent/main.py "Validate Xano auth endpoints safely" --run-xano --xano-allow-status 401,403,404
 ```
 
 ### Protocol + taxonomy
