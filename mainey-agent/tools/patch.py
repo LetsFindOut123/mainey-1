@@ -12,8 +12,8 @@ DEFAULT_PATCH_SCOPE = ["app/", "components/", "contracts/", "supabase/", "mainey
 
 
 def _utc_ts_compact() -> str:
-    # Example: 20260103T213045Z
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    # Example: 20260103T213045123456Z (microsecond precision to avoid collisions)
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
 
 
 def _safe_rel_path(p: str) -> str:
@@ -214,22 +214,47 @@ def emit_patch_bundle(
     scope = scope or list(DEFAULT_PATCH_SCOPE)
     bundle = create_bundle(repo_root)
 
-    _write_json(bundle.plan_path, {"role": role, "plan": plan, "task": task})
+    from .patch_planner import plan_patch
 
     patch_text = ""
     patch_needed = task_implies_repo_change(task) or bool(plan.get("cursor_edits"))
+    needs_llm = False
+    reason = "no_changes"
+
+    planned = plan_patch(repo_root=repo_root, task=task, scope=scope)
 
     if emit_patch:
-        if patch_needed and llm_model is not None:
+        # Operator v1.1: deterministic first, LLM only when necessary.
+        if planned.ok and planned.patch_text and "Empty patch" not in planned.patch_text:
+            patch_text = planned.patch_text
+            needs_llm = planned.needs_llm
+            reason = planned.reason
+        elif patch_needed and llm_model is not None:
             patch_text = generate_patch_with_llm(task=task, repo_root=repo_root, scope=scope, model=llm_model)
-            offenders = validate_patch_scope(patch_text, scope)
+            offenders = validate_patch_scope(patch_text, scope) if patch_text else []
             if offenders:
-                # Safety: refuse out-of-scope diffs.
                 patch_text = ""
-        # Always write a patch file (even if empty) so the bundle is deterministic.
-        if not patch_text:
-            patch_text = "# Empty patch (no changes emitted)\n"
-        _write_text(bundle.patch_path, patch_text)
+            needs_llm = False
+            reason = "llm_generated" if patch_text else planned.reason
+        else:
+            needs_llm = planned.needs_llm
+            reason = planned.reason
+
+        if patch_text:
+            _write_text(bundle.patch_path, patch_text)
+        else:
+            _write_text(bundle.patch_path, planned.patch_text or "# Empty patch (needs LLM or explicit targets)\n")
+
+    # Write plan.json after deciding if we need LLM.
+    _write_json(
+        bundle.plan_path,
+        {
+            "role": role,
+            "task": task,
+            "plan": plan,
+            "operator": {"needs_llm": needs_llm, "reason": reason},
+        },
+    )
 
     applied_files: list[str] = []
     if apply and emit_patch and patch_text:

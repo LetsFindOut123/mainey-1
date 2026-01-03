@@ -99,12 +99,26 @@ def _check_agent_self(repo_root: Path) -> dict[str, Any]:
     return {"name": "agent_self", "ok": ok, "details": "agent weweb snippet", "output": out[-2000:] if not ok else ""}
 
 
+def _check_agent_tests(repo_root: Path) -> dict[str, Any]:
+    tests_dir = repo_root / "mainey-agent" / "tests"
+    if not tests_dir.exists():
+        return {"name": "agent_tests", "ok": False, "details": "mainey-agent/tests missing"}
+
+    code, out = _run(
+        [sys.executable, "-m", "unittest", "discover", "-s", str(tests_dir), "-p", "test_*.py"],
+        cwd=repo_root,
+        timeout_s=300,
+    )
+    return {"name": "agent_tests", "ok": code == 0, "details": "unittest", "output": out[-4000:] if code != 0 else ""}
+
+
 def run_smoke(repo_root: Path) -> SmokeResult:
     checks = [
         _check_contracts(repo_root),
         _check_supabase_schema(repo_root),
         _check_next_build(repo_root),
         _check_agent_self(repo_root),
+        _check_agent_tests(repo_root),
     ]
     ok = all(c.get("ok") for c in checks)
     return SmokeResult(ok=ok, checks=checks)
