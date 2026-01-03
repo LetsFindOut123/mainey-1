@@ -16,40 +16,130 @@
       "path": "/api/events",
       "auth": "public",
       "input": { "query": { "limit": "integer?", "cursor": "string?" } },
-      "output": { "ok": true, "data": { "items": [], "pageInfo": { "nextCursor": null, "hasMore": false } } },
-      "todo": "Implement Supabase-backed event listing"
+      "output": {
+        "ok": true,
+        "data": {
+          "items": [
+            {
+              "id": "string",
+              "ownerId": "string",
+              "title": "string",
+              "description": "string",
+              "location": "string|null",
+              "startsAt": "string|null",
+              "endsAt": "string|null",
+              "createdAt": "string"
+            }
+          ],
+          "pageInfo": { "nextCursor": "string|null", "hasMore": "boolean" }
+        }
+      }
     },
     {
       "name": "CreateEvent",
       "method": "POST",
       "path": "/api/events",
       "auth": "user",
-      "input": { "body": { "title": "string", "date": "string", "location": "string?", "description": "string?" } },
-      "output": { "ok": true, "data": { "event": {} } },
-      "todo": "Implement authenticated event creation"
+      "input": {
+        "body": {
+          "title": "string",
+          "description": "string",
+          "location": "string?",
+          "starts_at": "string?",
+          "ends_at": "string?"
+        }
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "event": {
+            "id": "string",
+            "ownerId": "string",
+            "title": "string",
+            "description": "string",
+            "location": "string|null",
+            "startsAt": "string|null",
+            "endsAt": "string|null",
+            "createdAt": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "GetEvent",
+      "method": "GET",
+      "path": "/api/events/:id",
+      "auth": "public",
+      "input": { "params": { "id": "string" } },
+      "output": {
+        "ok": true,
+        "data": {
+          "event": {
+            "id": "string",
+            "ownerId": "string",
+            "title": "string",
+            "description": "string",
+            "location": "string|null",
+            "startsAt": "string|null",
+            "endsAt": "string|null",
+            "createdAt": "string"
+          },
+          "viewerRsvp": {
+            "status": "going|interested|not_going",
+            "createdAt": "string"
+          }
+        }
+      }
     },
     {
       "name": "UpdateEvent",
       "method": "PATCH",
       "path": "/api/events/:id",
       "auth": "user",
-      "input": { "params": { "id": "string" }, "body": { "title": "string?", "date": "string?" } },
-      "output": { "ok": true, "data": { "event": {} } },
-      "todo": "Implement event updates (authz: owner)"
+      "input": {
+        "params": { "id": "string" },
+        "body": { "title": "string?", "description": "string?", "location": "string?", "starts_at": "string?", "ends_at": "string?" }
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "event": {
+            "id": "string",
+            "ownerId": "string",
+            "title": "string",
+            "description": "string",
+            "location": "string|null",
+            "startsAt": "string|null",
+            "endsAt": "string|null",
+            "createdAt": "string"
+          }
+        }
+      }
     },
     {
       "name": "RSVP",
       "method": "POST",
-      "path": "/api/events/:id/rsvp",
+      "path": "/api/events/rsvp",
       "auth": "user",
-      "input": { "params": { "id": "string" }, "body": { "status": "going|interested|not_going" } },
-      "output": { "ok": true, "data": { "rsvp": {} } },
-      "todo": "Implement RSVP endpoint skeleton"
+      "input": { "body": { "event_id": "string", "status": "going|interested|not_going" } },
+      "output": {
+        "ok": true,
+        "data": {
+          "rsvp": {
+            "id": "string",
+            "eventId": "string",
+            "userId": "string",
+            "status": "going|interested|not_going",
+            "createdAt": "string"
+          }
+        }
+      }
     }
   ],
   "errors": [
     { "code": "bad_request", "http": 400 },
     { "code": "unauthorized", "http": 401 },
+    { "code": "forbidden", "http": 403 },
     { "code": "not_found", "http": 404 },
     { "code": "internal", "http": 500 }
   ]

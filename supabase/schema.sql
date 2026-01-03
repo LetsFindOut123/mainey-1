@@ -132,15 +132,77 @@ on gig_applications for insert
 with check (auth.uid() = user_id);
 
 -- Events (for calendar)
-create table if not exists events (
-  id uuid primary key default uuid_generate_v4(),
-  title text,
-  date date,
+-- Events MVP (v1): public read, authenticated create/edit + RSVPs
+-- NOTE: This replaces the earlier scaffold 'events' table shape.
+drop table if exists event_rsvps;
+drop table if exists events;
+
+create table events (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id),
+  title text not null,
+  description text not null,
   location text,
-  description text,
-  organizer_id uuid references profiles(id) on delete set null,
-  created_at timestamp default now()
+  starts_at timestamptz,
+  ends_at timestamptz,
+  created_at timestamptz default now()
 );
+
+create index events_created_at_idx on events (created_at desc);
+
+alter table events enable row level security;
+
+create policy "Public read events"
+on events for select
+using (true);
+
+create policy "Authenticated insert events"
+on events for insert
+with check (auth.uid() = owner_id);
+
+create policy "Owner update events"
+on events for update
+using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
+
+create policy "Owner delete events"
+on events for delete
+using (auth.uid() = owner_id);
+
+create table event_rsvps (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references events(id) on delete cascade,
+  user_id uuid not null references auth.users(id),
+  status text not null default 'going',
+  created_at timestamptz default now(),
+  unique (event_id, user_id)
+);
+
+create index event_rsvps_event_id_idx on event_rsvps (event_id);
+create index event_rsvps_user_id_idx on event_rsvps (user_id);
+
+alter table event_rsvps enable row level security;
+
+create policy "User read own rsvps"
+on event_rsvps for select
+using (auth.uid() = user_id);
+
+create policy "Event owner read rsvps"
+on event_rsvps for select
+using (
+  auth.uid() in (
+    select owner_id from events where events.id = event_rsvps.event_id
+  )
+);
+
+create policy "Authenticated insert rsvps"
+on event_rsvps for insert
+with check (auth.uid() = user_id);
+
+create policy "User update own rsvps"
+on event_rsvps for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
 -- Companies
 create table if not exists companies (
