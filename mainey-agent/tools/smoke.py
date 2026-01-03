@@ -92,8 +92,16 @@ def _check_next_build(repo_root: Path) -> dict[str, Any]:
         pass
 
     code, out = _run(["npm", "run", "build"], cwd=repo_root, timeout_s=900)
-    if code != 0 and ("ENOTEMPTY" in out or "ENOENT" in out) and ".next/export" in out:
+    if code != 0 and (("ENOTEMPTY" in out or "ENOENT" in out) and ".next/export" in out):
         # Retry once after cleaning.
+        try:
+            shutil.rmtree(repo_root / ".next", ignore_errors=True)
+        except Exception:
+            pass
+        code, out = _run(["npm", "run", "build"], cwd=repo_root, timeout_s=900)
+
+    if code != 0 and "Unexpected end of JSON input" in out and "load-manifest" in out:
+        # Retry once for transient/corrupt manifest
         try:
             shutil.rmtree(repo_root / ".next", ignore_errors=True)
         except Exception:
@@ -166,6 +174,27 @@ def _check_map_pins_v1_files(repo_root: Path) -> dict[str, Any]:
     missing = [str(p.relative_to(repo_root)) for p in required if not p.exists()]
     return {"name": "map_pins_v1_files", "ok": not missing, "details": "missing: " + ", ".join(missing) if missing else "present"}
 
+def _check_companies_v1_files(repo_root: Path) -> dict[str, Any]:
+    required = [
+        repo_root / "contracts" / "companies.json",
+        repo_root / "app" / "api" / "companies" / "route.ts",
+        repo_root / "app" / "api" / "companies" / "mine" / "route.ts",
+        repo_root / "app" / "api" / "companies" / "[slug]" / "route.ts",
+        repo_root / "app" / "api" / "companies" / "[slug]" / "pages" / "route.ts",
+        repo_root / "app" / "companies" / "page.tsx",
+        repo_root / "app" / "companies" / "ui.tsx",
+        repo_root / "app" / "companies" / "[slug]" / "page.tsx",
+        repo_root / "app" / "companies" / "[slug]" / "ui.tsx",
+        repo_root / "app" / "dashboard" / "companies" / "page.tsx",
+        repo_root / "app" / "dashboard" / "companies" / "ui.tsx",
+        repo_root / "app" / "dashboard" / "companies" / "new" / "page.tsx",
+        repo_root / "app" / "dashboard" / "companies" / "new" / "ui.tsx",
+        repo_root / "app" / "dashboard" / "companies" / "[slug]" / "edit" / "page.tsx",
+        repo_root / "app" / "dashboard" / "companies" / "[slug]" / "edit" / "ui.tsx",
+    ]
+    missing = [str(p.relative_to(repo_root)) for p in required if not p.exists()]
+    return {"name": "companies_v1_files", "ok": not missing, "details": "missing: " + ", ".join(missing) if missing else "present"}
+
 
 def run_smoke(repo_root: Path) -> SmokeResult:
     checks = [
@@ -174,6 +203,7 @@ def run_smoke(repo_root: Path) -> SmokeResult:
         _check_gigs_mvp_files(repo_root),
         _check_events_mvp_files(repo_root),
         _check_map_pins_v1_files(repo_root),
+        _check_companies_v1_files(repo_root),
         _check_next_build(repo_root),
         _check_agent_self(repo_root),
         _check_agent_tests(repo_root),

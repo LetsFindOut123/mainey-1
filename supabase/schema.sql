@@ -255,13 +255,99 @@ using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
 -- Companies
-create table if not exists companies (
-  id uuid primary key default uuid_generate_v4(),
-  name text,
-  description text,
-  base_city text,
-  members uuid[], -- array of profile ids (can normalize later)
-  created_at timestamp default now()
+-- Companies v1 (public by slug + owner-managed pages)
+drop table if exists company_pages;
+drop table if exists companies;
+
+create table companies (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id),
+  name text not null,
+  slug text not null unique,
+  bio text,
+  website_url text,
+  logo_url text,
+  theme jsonb,
+  created_at timestamptz default now()
+);
+
+create index companies_created_at_idx on companies (created_at desc);
+create index companies_owner_id_idx on companies (owner_id);
+
+alter table companies enable row level security;
+
+create policy "Public read companies"
+on companies for select
+using (true);
+
+create policy "Authenticated insert companies"
+on companies for insert
+with check (auth.uid() = owner_id);
+
+create policy "Owner update companies"
+on companies for update
+using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
+
+create policy "Owner delete companies"
+on companies for delete
+using (auth.uid() = owner_id);
+
+create table company_pages (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
+  type text not null,
+  title text,
+  content jsonb not null default '{}'::jsonb,
+  sort_order int not null default 0,
+  created_at timestamptz default now(),
+  unique (company_id, type)
+);
+
+create index company_pages_company_id_idx on company_pages (company_id);
+create index company_pages_sort_idx on company_pages (company_id, sort_order asc);
+
+alter table company_pages enable row level security;
+
+create policy "Public read company_pages"
+on company_pages for select
+using (true);
+
+create policy "Owner insert company_pages"
+on company_pages for insert
+with check (
+  exists (
+    select 1 from companies c
+    where c.id = company_pages.company_id
+      and c.owner_id = auth.uid()
+  )
+);
+
+create policy "Owner update company_pages"
+on company_pages for update
+using (
+  exists (
+    select 1 from companies c
+    where c.id = company_pages.company_id
+      and c.owner_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from companies c
+    where c.id = company_pages.company_id
+      and c.owner_id = auth.uid()
+  )
+);
+
+create policy "Owner delete company_pages"
+on company_pages for delete
+using (
+  exists (
+    select 1 from companies c
+    where c.id = company_pages.company_id
+      and c.owner_id = auth.uid()
+  )
 );
 
 -- Spaces (venues, studios)

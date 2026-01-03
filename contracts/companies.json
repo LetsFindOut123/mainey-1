@@ -1,19 +1,146 @@
 {
   "module": "companies",
   "version": "1.0",
+  "pagination": {
+    "type": "cursor",
+    "cursorField": "created_at",
+    "params": {
+      "limit": { "type": "integer", "default": 10, "min": 1, "max": 50 },
+      "cursor": { "type": "string", "nullable": true }
+    }
+  },
   "endpoints": [
+    {
+      "name": "ListCompanies",
+      "method": "GET",
+      "path": "/api/companies",
+      "auth": "public",
+      "input": { "query": { "limit": "integer?", "cursor": "string?" } },
+      "output": {
+        "ok": true,
+        "data": {
+          "items": [
+            {
+              "id": "string",
+              "ownerId": "string",
+              "name": "string",
+              "slug": "string",
+              "bio": "string|null",
+              "websiteUrl": "string|null",
+              "logoUrl": "string|null",
+              "theme": "object|null",
+              "createdAt": "string"
+            }
+          ],
+          "pageInfo": { "nextCursor": "string|null", "hasMore": "boolean" }
+        }
+      }
+    },
     {
       "name": "GetCompanyBySlug",
       "method": "GET",
       "path": "/api/companies/:slug",
       "auth": "public",
       "input": { "params": { "slug": "string" } },
-      "output": { "ok": true, "data": { "company": {} } },
-      "todo": "Implement public company by slug skeleton"
+      "output": {
+        "ok": true,
+        "data": {
+          "company": {
+            "id": "string",
+            "ownerId": "string",
+            "name": "string",
+            "slug": "string",
+            "bio": "string|null",
+            "websiteUrl": "string|null",
+            "logoUrl": "string|null",
+            "theme": "object|null",
+            "createdAt": "string"
+          },
+          "pages": [
+            {
+              "id": "string",
+              "companyId": "string",
+              "type": "hero|about|links|events|gigs|custom",
+              "title": "string|null",
+              "content": "object",
+              "sortOrder": "integer",
+              "createdAt": "string"
+            }
+          ],
+          "related": { "gigsCount": "integer", "eventsCount": "integer" }
+        }
+      }
+    },
+    {
+      "name": "CreateCompany",
+      "method": "POST",
+      "path": "/api/companies",
+      "auth": "user",
+      "input": {
+        "body": {
+          "name": "string",
+          "slug": "string",
+          "bio": "string?",
+          "website_url": "string?",
+          "logo_url": "string?"
+        }
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "company": {
+            "id": "string",
+            "ownerId": "string",
+            "name": "string",
+            "slug": "string"
+          },
+          "pages": "array"
+        }
+      }
+    },
+    {
+      "name": "UpdateCompany",
+      "method": "PATCH",
+      "path": "/api/companies/:slug",
+      "auth": "user",
+      "input": {
+        "params": { "slug": "string" },
+        "body": { "name": "string?", "bio": "string?", "website_url": "string?", "logo_url": "string?", "theme": "object?" }
+      },
+      "output": { "ok": true, "data": { "company": "object" } }
+    },
+    {
+      "name": "ListCompanyPages",
+      "method": "GET",
+      "path": "/api/companies/:slug/pages",
+      "auth": "public",
+      "input": { "params": { "slug": "string" } },
+      "output": { "ok": true, "data": { "pages": "array" } }
+    },
+    {
+      "name": "UpdateCompanyPages",
+      "method": "PATCH",
+      "path": "/api/companies/:slug/pages",
+      "auth": "user",
+      "input": {
+        "params": { "slug": "string" },
+        "body": { "pages": "array (hero/about/links only in v1)" }
+      },
+      "output": { "ok": true, "data": { "pages": "array" } }
+    },
+    {
+      "name": "ListMyCompanies",
+      "method": "GET",
+      "path": "/api/companies/mine",
+      "auth": "user",
+      "input": { "query": { "limit": "integer?", "cursor": "string?" } },
+      "output": { "ok": true, "data": { "items": "array", "pageInfo": "object" } }
     }
   ],
   "errors": [
     { "code": "bad_request", "http": 400 },
+    { "code": "unauthorized", "http": 401 },
+    { "code": "forbidden", "http": 403 },
     { "code": "not_found", "http": 404 },
     { "code": "internal", "http": 500 }
   ]
