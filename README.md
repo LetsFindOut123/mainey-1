@@ -32,3 +32,10 @@ In Supabase → SQL Editor → paste the contents of `supabase/schema.sql` and r
 - Hook up real queries on each page
 - Add Supabase Auth UI for profile editing
 - Build project dashboards + calendar sync
+
+## Mainey Agent (CLI scaffold)
+
+This repo also includes a small Python CLI scaffold in `mainey-agent/` for automation tasks (Xano calls, WeWeb snippet generation, lightweight memory/history).
+
+- Setup: see `mainey-agent/README.md`
+- Run: `python3 mainey-agent/main.py "your task here"`
