@@ -24,6 +24,36 @@ create table if not exists posts (
   created_at timestamp default now()
 );
 
+-- Feed MVP (v1): public read, authenticated post
+-- Uses auth.users directly (does not require profiles row).
+create table if not exists feed_posts (
+  id uuid primary key default uuid_generate_v4(),
+  author_id uuid references auth.users(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists feed_posts_created_at_idx on feed_posts (created_at desc);
+
+alter table feed_posts enable row level security;
+
+create policy "Public read feed_posts"
+on feed_posts for select
+using (true);
+
+create policy "Authenticated insert feed_posts"
+on feed_posts for insert
+with check (auth.uid() = author_id);
+
+create policy "Author update feed_posts"
+on feed_posts for update
+using (auth.uid() = author_id)
+with check (auth.uid() = author_id);
+
+create policy "Author delete feed_posts"
+on feed_posts for delete
+using (auth.uid() = author_id);
+
 -- Projects
 create table if not exists projects (
   id uuid primary key default uuid_generate_v4(),
