@@ -1,0 +1,12 @@
+{
+  "name": "side-project",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'No dev script yet'",
+    "build": "echo 'No build script yet'",
+    "start": "echo 'No start script yet'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
