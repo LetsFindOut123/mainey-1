@@ -22,6 +22,16 @@ npm install
 npm run dev
 ```
 
+## Side Project (kept separate)
+There is an independent side project in `side-project/` with its own `package.json`.
+
+```bash
+cd side-project
+npm install
+npm run build
+npm run dev
+```
+
 ## 4) Deploy
 Push to GitHub. Vercel will auto-build and deploy.
 
